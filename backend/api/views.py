@@ -1,12 +1,14 @@
 from django.contrib.auth import get_user_model, authenticate
 from django.core.files.storage import default_storage
-from rest_framework import mixins, status, viewsets
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
 from .permissions import (
+    IsAdminOrReadOnly,
     CustomIsAuthenticated,
     IsAdminOrOwnerOrReadOnly,
     IsAdminOrReadAndCreateOnly
@@ -15,9 +17,15 @@ from .serializers import (
     AvatarSerializer,
     AppUserSerializer,
     TokenSerializer,
-    PasswordSerializer
+    PasswordSerializer,
+    RecipeSerializer,
+    IngridientSerializer,
+    TagSerializer
 )
+from recipes.models import Recipe, Ingridient, Tag
 from users.models import BlacklistedToken
+from .base_entities import AllowedMethodsMixin
+from .filters import RecipeFilter
 
 User = get_user_model()
 
@@ -156,3 +164,35 @@ class TokenView(
             )
             blacklisted_token.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class RecipeView(AllowedMethodsMixin, viewsets.ModelViewSet):
+    """Вьюсет для работы с рецептами."""
+
+    queryset = Recipe.objects.all()
+    permission_classes = (IsAdminOrOwnerOrReadOnly,)
+    serializer_class = RecipeSerializer
+    pagination_class = LimitOffsetPagination
+    filter_backends = (DjangoFilterBackend, filters.SearchFilter)
+    filterset_class = RecipeFilter
+    search_fields = ('name',)
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
+
+class IngridientView(viewsets.ModelViewSet):
+    """Вьюсет для работы с ингридиентами."""
+
+    queryset = Ingridient.objects.all()
+    serializer_class = IngridientSerializer
+    pagination_class = None
+
+
+class TagView(viewsets.ModelViewSet):
+    """Вьюсет для работы с тегами."""
+
+    queryset = Tag.objects.all()
+    permission_classes = (IsAdminOrReadOnly,)
+    serializer_class = TagSerializer
+    pagination_class = None

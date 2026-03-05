@@ -11,6 +11,7 @@ from .validators import username_validator
 
 
 class AppUser(AbstractUser):
+    """Кастомная модель пользователя."""
 
     email = models.EmailField(
         'Электронная почта',
@@ -36,6 +37,8 @@ class AppUser(AbstractUser):
     )
 
     class Meta:
+        verbose_name = 'пользователь'
+        verbose_name_plural = 'Пользователи'
         ordering = ('username',)
 
     def __str__(self):
@@ -43,8 +46,15 @@ class AppUser(AbstractUser):
 
 
 class BlacklistedToken(models.Model):
-    token = models.CharField(max_length=TOKEN_MAX_LENGTH)
-    blacklist_time = models.DateTimeField(auto_now_add=True)
+    """Модель "черного списка" токенов."""
+
+    token = models.CharField('Токен', max_length=TOKEN_MAX_LENGTH)
+    blacklist_time = models.DateTimeField('Время удаления', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'токен'
+        verbose_name_plural = 'Токены'
+        ordering = ('-blacklist_time',)
 
     def __str__(self):
         return self.token
