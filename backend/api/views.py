@@ -19,10 +19,10 @@ from .serializers import (
     TokenSerializer,
     PasswordSerializer,
     RecipeSerializer,
-    IngridientSerializer,
+    IngredientSerializer,
     TagSerializer
 )
-from recipes.models import Recipe, Ingridient, Tag
+from recipes.models import Recipe, Ingredient, Tag
 from users.models import BlacklistedToken
 from .base_entities import AllowedMethodsMixin
 from .filters import RecipeFilter
@@ -170,8 +170,8 @@ class RecipeView(AllowedMethodsMixin, viewsets.ModelViewSet):
     """Вьюсет для работы с рецептами."""
 
     queryset = Recipe.objects.all()
-    permission_classes = (IsAdminOrOwnerOrReadOnly,)
     serializer_class = RecipeSerializer
+    permission_classes = (IsAdminOrOwnerOrReadOnly,)
     pagination_class = LimitOffsetPagination
     filter_backends = (DjangoFilterBackend, filters.SearchFilter)
     filterset_class = RecipeFilter
@@ -181,11 +181,11 @@ class RecipeView(AllowedMethodsMixin, viewsets.ModelViewSet):
         serializer.save(author=self.request.user)
 
 
-class IngridientView(viewsets.ModelViewSet):
+class IngredientView(viewsets.ModelViewSet):
     """Вьюсет для работы с ингридиентами."""
 
-    queryset = Ingridient.objects.all()
-    serializer_class = IngridientSerializer
+    queryset = Ingredient.objects.all()
+    serializer_class = IngredientSerializer
     pagination_class = None
 
 

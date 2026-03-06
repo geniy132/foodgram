@@ -10,7 +10,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.utils.text import slugify
 from rest_framework import serializers, validators
 
-from recipes.models import Recipe, Ingridient, Tag, IngridientRecipe
+from recipes.models import Recipe, Ingredient, Tag, IngredientRecipe
 
 User = get_user_model()
 
@@ -111,16 +111,15 @@ class PasswordSerializer(serializers.Serializer):
         return instance
 
 
-class IngridientSerializer(serializers.ModelSerializer):
+class IngredientSerializer(serializers.ModelSerializer):
     """
     Сериализатор для работы с ингридиентами.
     """
-
-    ingridient_name = serializers.CharField(source='name')
+    amount = serializers.CharField() 
 
     class Meta:
-        model = Ingridient
-        fields = ('id', 'ingridient_name')
+        model = Ingredient
+        fields = ('id', 'name', 'measurement_unit', 'amount')
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -132,73 +131,83 @@ class TagSerializer(serializers.ModelSerializer):
         model = Tag
         fields = ('id', 'name', 'slug')
 
+    def to_internal_value(self, data):
+        if isinstance(data, int):
+            try:
+                return Tag.objects.get(id=data)
+            except Tag.DoesNotExist:
+                raise serializers.ValidationError(
+                    'Тег с указанным ID не найден.'
+                )
+        return super().to_internal_value(data)
+
 
 class RecipeSerializer(serializers.ModelSerializer):
     """
     Сериализатор для работы с рецептами.
     """
 
-    ingridients = IngridientSerializer(required=True, many=True)
-    itags = TagSerializer(required=True, many=True)
+    author = AppUserSerializer(read_only=True)
+    ingredients = IngredientSerializer(required=True, many=True)
+    tags = TagSerializer(required=True, many=True)
     image = Base64ImageField(required=False, allow_null=True)
 
     class Meta:
         model = Recipe
         fields = (
-            'ingridients', 'tags', 'image', 'name', 'text',
-            'cooking_time'
+            'id', 'tags', 'author', 'ingredients',
+            'is_favorited', 'is_in_shopping_cart',
+            'name', 'image', 'text', 'cooking_time'
         )
-        read_only_fields = ('author', 'slug',)
+        read_only_fields = ('slug',)
 
-        validators = [
-            validators.UniqueTogetherValidator(
-                queryset=Recipe.objects.all(),
-                fields=('author', 'name')
+    def validate(self, data):
+        request = self.context.get('request')
+        name = data.get('name', self.instance.name if self.instance else None)
+        author = request.user
+        recipe_id = self.instance.id if self.instance else None
+        if Recipe.objects.filter(
+            author=author, name=name
+        ).exclude(id=recipe_id).exists():
+            raise serializers.ValidationError(
+                'У вас уже есть рецепт с таким названием!'
             )
-        ]
+        return data
+
+    def process_relations(self, recipe, tags_data, ingredients_data):
+        if ingredients_data is not None:
+            IngredientRecipe.objects.filter(recipe=recipe).delete()
+            ingredient_list = []
+            for item in ingredients_data:
+                raw_name = item.get('name')
+                clean_name = raw_name.strip().lower() if raw_name else ''
+                amount = item.get('amount')
+                unit = item.get('measurement_unit')
+                if not amount or str(amount).strip() == "":
+                    raise serializers.ValidationError("Количество не может быть пустым")
+                ingredient, created = Ingredient.objects.get_or_create(
+                    name=clean_name,
+                    defaults={'measurement_unit': unit}
+                )
+                ingredient_list.append(
+                    IngredientRecipe(
+                        recipe=recipe,
+                        ingredient=ingredient,
+                        amount=str(amount)
+                    )
+                )
+            IngredientRecipe.objects.bulk_create(ingredient_list)
 
     def create(self, validated_data):
-        ingridients = validated_data.pop('ingridients')
         tags = validated_data.pop('tags')
+        ingredients = validated_data.pop('ingredients')
         recipe = Recipe.objects.create(**validated_data)
-        for ingridient in ingridients:
-            current_ingridient, status = Ingridient.objects.get_or_create(
-                **ingridient
-            )
-            IngridientRecipe.objects.create(
-                recipe=recipe,
-                ingridient=current_ingridient
-            )
-
-        for tag in tags:
-            current_tag, _ = Tag.objects.get_or_create(**tag)
-            recipe.tags.add(current_tag)
-
+        self.process_relations(recipe, tags, ingredients)
         return recipe
 
     def update(self, instance, validated_data):
-        instance.name = validated_data.get('name', instance.name)
-        instance.text = validated_data.get('text', instance.text)
-        instance.cooking_time = validated_data.get(
-            'cooking_time', instance.cooking_time
-        )
-        instance.image = validated_data.get('image', instance.image)
-
-        ingridients_data = validated_data.pop('ingridients')
-        tags_data = validated_data.pop('tags')
-
-        instance.ingridients.clear()
-        instance.tags.clear()
-        for ingridient_data in ingridients_data:
-            current_ingridient, status = Ingridient.objects.get_or_create(
-                **ingridient_data
-            )
-            IngridientRecipe.objects.create(
-                recipe=instance,
-                ingridient=current_ingridient
-            )
-        for tag_data in tags_data:
-            tag, status = Tag.objects.get_or_create(**tag_data)
-            instance.tags.add(tag)
-        instance.save()
+        tags = validated_data.pop('tags', None)
+        ingredients = validated_data.pop('ingredients', None)
+        instance = super().update(instance, validated_data)
+        self.process_relations(instance, tags, ingredients)
         return instance

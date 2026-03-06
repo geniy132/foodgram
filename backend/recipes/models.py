@@ -1,6 +1,5 @@
 from django.contrib.auth import get_user_model
 from django.db import models
-from pytils.translit import slugify
 
 from .constants import (
     SHORT_NAME_LENGTH,
@@ -8,15 +7,20 @@ from .constants import (
     TEXT_MAX_LENGTH,
     SLUG_MAX_LENGTH
 )
+from .mixins import SlugModelMixin
 
 User = get_user_model()
 
 
-class Ingridient(models.Model):
+class Ingredient(models.Model):
     """Модель ингридиента."""
     name = models.CharField(
         'Название',
         unique=True,
+        max_length=SHORT_NAME_LENGTH
+    )
+    measurement_unit = models.CharField(
+        'Единица измерения',
         max_length=SHORT_NAME_LENGTH
     )
 
@@ -29,7 +33,7 @@ class Ingridient(models.Model):
         return self.name[:SHORT_NAME_LENGTH]
 
 
-class Tag(models.Model):
+class Tag(SlugModelMixin, models.Model):
     """Модель тега."""
     name = models.CharField(
         'Название',
@@ -51,19 +55,13 @@ class Tag(models.Model):
     def __str__(self):
         return self.name[:SHORT_NAME_LENGTH]
 
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            max_slug_length = self._meta.get_field('slug').max_length
-            self.slug = slugify(self.name)[:max_slug_length]
-        super().save(*args, **kwargs)
 
-
-class Recipe(models.Model):
+class Recipe(SlugModelMixin, models.Model):
     """Модель рецепта."""
 
-    ingridients = models.ManyToManyField(
-        Ingridient,
-        through='IngridientRecipe',
+    ingredients = models.ManyToManyField(
+        Ingredient,
+        through='IngredientRecipe',
         related_name='recipes',
         verbose_name='Ингридиенты'
     )
@@ -127,19 +125,15 @@ class Recipe(models.Model):
     def __str__(self):
         return self.name[:SHORT_NAME_LENGTH]
 
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            max_slug_length = self._meta.get_field('slug').max_length
-            self.slug = slugify(
-                f"{self.name}-{self.author.id}"
-            )[:max_slug_length]
-        super().save(*args, **kwargs)
+    def get_slug_content(self):
+        return f'{self.name}-{self.author.id}'
 
 
-class IngridientRecipe(models.Model):
+class IngredientRecipe(models.Model):
     """Промежуточная модель ингридиента."""
-    ingridient = models.ForeignKey(Ingridient, on_delete=models.CASCADE)
+    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+    amount = models.CharField('Количество', max_length=50)
 
     def __str__(self):
-        return f'{self.ingridient} {self.recipe}'
+        return f'{self.ingredient} {self.recipe}'
