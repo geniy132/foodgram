@@ -1,6 +1,6 @@
-from django.core.exceptions import ValidationError
-
 import re
+
+from django.core.exceptions import ValidationError
 
 
 def username_validator(value):
@@ -11,4 +11,4 @@ def username_validator(value):
             f'Недопустимые символы в имени пользователя: {invalid_chars}'
         )
     if value.lower() == 'me':
-        raise ValidationError('Имя пользователя me запрещено.')
+        raise ValidationError('Имя пользователя "me" запрещено.')

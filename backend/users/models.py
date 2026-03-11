@@ -5,7 +5,6 @@ from .constants import (
     EMAIL_MAX_LENGTH,
     SHORT_NAME_LENGTH,
     USER_NAME_MAX_LENGTH,
-    TOKEN_MAX_LENGTH
 )
 from .validators import username_validator
 
@@ -18,23 +17,21 @@ class AppUser(AbstractUser):
         unique=True,
         max_length=EMAIL_MAX_LENGTH
     )
-    username = models.SlugField(
+    username = models.CharField(
         'Имя пользователя',
         unique=True,
         max_length=USER_NAME_MAX_LENGTH,
         validators=[username_validator]
     )
-    is_subscribed = models.BooleanField(
-        'Подписан',
-        default=False,
-        blank=True
-    )
     avatar = models.ImageField(
         'Аватарка',
         upload_to='images/avatars/',
         null=True,
+        blank=True,
         default=None
     )
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
 
     class Meta:
         verbose_name = 'пользователь'
@@ -45,16 +42,26 @@ class AppUser(AbstractUser):
         return self.username[:SHORT_NAME_LENGTH]
 
 
-class BlacklistedToken(models.Model):
-    """Модель "черного списка" токенов."""
+class Follow(models.Model):
+    """Модель подписок."""
 
-    token = models.CharField('Токен', max_length=TOKEN_MAX_LENGTH)
-    blacklist_time = models.DateTimeField('Время удаления', auto_now_add=True)
+    user = models.ForeignKey(
+        AppUser, on_delete=models.CASCADE, related_name='follower'
+    )
+    author = models.ForeignKey(
+        AppUser, on_delete=models.CASCADE, related_name='following'
+    )
 
     class Meta:
-        verbose_name = 'токен'
-        verbose_name_plural = 'Токены'
-        ordering = ('-blacklist_time',)
-
-    def __str__(self):
-        return self.token
+        verbose_name = 'подписка'
+        verbose_name_plural = 'Подписки'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'author'],
+                name='unique_follow'
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(user=models.F('author')),
+                name='no_self_follow'
+            )
+        ]
