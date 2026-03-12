@@ -32,8 +32,8 @@ class AppUserSerializer(serializers.ModelSerializer):
 
     avatar = serializers.SerializerMethodField('get_image_url', read_only=True)
     password = serializers.CharField(write_only=True)
-    first_name = serializers.CharField(required=True)
-    last_name = serializers.CharField(required=True)
+    first_name = serializers.CharField(max_length=150, required=True)
+    last_name = serializers.CharField(max_length=150, required=True)
     is_subscribed = serializers.SerializerMethodField()
 
     def validate_password(self, value):
@@ -68,7 +68,7 @@ class AvatarSerializer(serializers.ModelSerializer):
     Сериализатор для работы с аватаркой.
     """
 
-    avatar = Base64ImageField(required=False, allow_null=True)
+    avatar = Base64ImageField(required=True)
 
     class Meta:
         model = User
@@ -142,16 +142,24 @@ class IngredientRecipeSerializer(serializers.ModelSerializer):
     measurement_unit = serializers.ReadOnlyField(
         source='ingredient.measurement_unit'
     )
-    amount = serializers.SerializerMethodField()
+    amount = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = IngredientRecipe
         fields = ('id', 'name', 'measurement_unit', 'amount')
 
-    def get_amount(self, obj):
-        if obj.amount is None or obj.amount == 0:
-            return "по вкусу"
-        return obj.amount
+    def to_internal_value(self, data):
+        amount = data.get('amount')
+        if amount == 'по вкусу' or not amount:
+            data['amount'] = 0
+        return super().to_internal_value(data)
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        if not instance.amount:
+            representation['amount'] = 'по вкусу'
+            representation['measurement_unit'] = ''
+        return representation
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -198,30 +206,43 @@ class RecipeSerializer(serializers.ModelSerializer):
         ).data
 
     def validate(self, data):
+        request = self.context.get('request')
+        tags = self.initial_data.get('tags')
         ingredients = self.initial_data.get('ingredients')
-        if not ingredients:
-            raise serializers.ValidationError('Нужен хотя бы один ингредиент')
-        user = self.context.get('request').user
+        if not tags or not ingredients:
+            raise serializers.ValidationError('Заполните все поля')
+        if Tag.objects.filter(id__in=tags).count() != len(set(tags)):
+            raise serializers.ValidationError('Указан несуществующий тег!')
+        if len(tags) != len(set(tags)):
+            raise serializers.ValidationError('Теги не должны повторяться!')
+        ingredients_ids = [
+            item.get('id') for item in ingredients if item.get('id')
+        ]
+        if len(ingredients_ids) != len(set(ingredients_ids)):
+            raise serializers.ValidationError(
+                'Ингредиенты не должны повторяться!'
+            )
         name = data.get('name')
-        if Recipe.objects.filter(author=user, name=name).exclude(
+        if Recipe.objects.filter(author=request.user, name=name).exclude(
             id=self.instance.id if self.instance else None
         ).exists():
-            raise serializers.ValidationError(
-                'У вас уже есть рецепт с таким названием'
-            )
+            raise serializers.ValidationError('У вас уже есть такой рецепт')
         data['ingredients'] = ingredients
         return data
 
     def process_ingredients(self, recipe, ingredients):
         IngredientRecipe.objects.filter(recipe=recipe).delete()
-        IngredientRecipe.objects.bulk_create([
-            IngredientRecipe(
+        ingredient_list = []
+        for item in ingredients:
+            amount = item.get('amount')
+            if amount == 'по вкусу' or not amount:
+                amount = 0
+            ingredient_list.append(IngredientRecipe(
                 recipe=recipe,
-                amount=item['amount'],
-                ingredient=get_object_or_404(Ingredient, id=item['id'])
-            )
-            for item in ingredients
-        ])
+                ingredient=get_object_or_404(Ingredient, id=item.get('id')),
+                amount=int(amount)
+            ))
+        IngredientRecipe.objects.bulk_create(ingredient_list)
 
     def create(self, validated_data):
         ingredients = validated_data.pop('ingredients')

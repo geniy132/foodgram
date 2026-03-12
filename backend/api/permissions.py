@@ -3,8 +3,8 @@ from rest_framework import permissions
 
 class IsAdminOrReadAndCreateOnly(permissions.BasePermission):
     """
-    Позволяет всем создавать пользователя и просматривать список
-    пользователей. Остальные операции доступны только администратору.
+    Разрешает только ['GET', 'POST'].
+    Остальные операции доступны только администратору.
     """
 
     def has_permission(self, request, view):
@@ -15,8 +15,8 @@ class IsAdminOrReadAndCreateOnly(permissions.BasePermission):
 
 class IsAdminOrOwnerOrReadOnly(permissions.BasePermission):
     """
-    Разрешение на уровне объекта: редактировать/удалять
-    может только автор или администратор.
+    Разрешение на уровне объекта: вносить изменения в базу
+    может автор или администратор.
     """
 
     def has_object_permission(self, request, view, obj):
@@ -29,8 +29,8 @@ class IsAdminOrOwnerOrReadOnly(permissions.BasePermission):
 
 class IsAdminOrReadOnly(permissions.BasePermission):
     """
-    Разрешение на уровне объекта.
-    Позволяет создавать или редактировать объект только администратору.
+    Разрешение на уровне объекта: вносить изменения в базу
+    может только администратор.
     """
 
     def has_permission(self, request, view):
@@ -39,12 +39,3 @@ class IsAdminOrReadOnly(permissions.BasePermission):
             or (request.user and request.user.is_authenticated
                 and request.user.is_staff)
         )
-
-
-class OnlyAdmin(permissions.BasePermission):
-    """
-    Разрешает все действия только роли администратору.
-    """
-
-    def has_permission(self, request, view):
-        return request.user.is_staff

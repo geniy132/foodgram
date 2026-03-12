@@ -112,8 +112,7 @@ class UserViewSet(viewsets.ModelViewSet):
         else:
             serializer = AvatarSerializer(
                 instance,
-                data=request.data,
-                partial=True
+                data=request.data
             )
             serializer.is_valid(raise_exception=True)
             serializer.save()
