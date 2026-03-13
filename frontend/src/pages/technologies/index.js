@@ -22,7 +22,7 @@ const Technologies = () => {
                 Python
               </li>
               <li className={styles.textItem}>
-                Django
+                Django v3.12.7
               </li>
               <li className={styles.textItem}>
                 Django REST Framework
