@@ -14,6 +14,7 @@ class AppUserAdmin(UserAdmin):
     list_filter = ('email', 'username')
     ordering = ('email',)
 
+
 @admin.register(Follow)
 class FollowAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'author')

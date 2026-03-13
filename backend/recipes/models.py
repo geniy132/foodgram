@@ -3,10 +3,10 @@ from django.core import validators
 from django.db import models
 
 from .constants import (
-    SHORT_NAME_LENGTH,
     NAME_MAX_LENGTH,
-    TEXT_MAX_LENGTH,
+    SHORT_NAME_LENGTH,
     SLUG_MAX_LENGTH,
+    TEXT_MAX_LENGTH,
     UNIT_MAX_LENGTH
 )
 from .mixins import SlugModelMixin

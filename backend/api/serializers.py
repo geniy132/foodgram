@@ -1,15 +1,12 @@
 import base64
 
-from django.core.files.base import ContentFile
-from django.contrib.auth import (
-    get_user_model,
-    update_session_auth_hash
-)
+from django.contrib.auth import get_user_model, update_session_auth_hash
 from django.contrib.auth.password_validation import validate_password
+from django.core.files.base import ContentFile
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
-from recipes.models import Recipe, Ingredient, Tag, IngredientRecipe
+from recipes.models import Ingredient, IngredientRecipe, Recipe, Tag
 
 User = get_user_model()
 

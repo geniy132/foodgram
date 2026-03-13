@@ -1,6 +1,6 @@
-from django.db.models import Sum
 from django.contrib.auth import get_user_model
 from django.core.files.storage import default_storage
+from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -13,33 +13,33 @@ from rest_framework.permissions import (
 )
 from rest_framework.response import Response
 
+from recipes.models import (
+    Favorite,
+    Ingredient,
+    IngredientRecipe,
+    Recipe,
+    ShoppingCart,
+    Tag
+)
+from users.models import Follow
+
 from .base_entities import AllowedMethodsMixin
 from .filters import RecipeFilter
 from .permissions import (
-    IsAdminOrReadOnly,
     IsAdminOrOwnerOrReadOnly,
-    IsAdminOrReadAndCreateOnly
+    IsAdminOrReadAndCreateOnly,
+    IsAdminOrReadOnly
 )
 from .serializers import (
-    AvatarSerializer,
     AppUserSerializer,
+    AvatarSerializer,
+    FollowSerializer,
+    IngredientSerializer,
     PasswordSerializer,
     RecipeSerializer,
     RecipeShortSerializer,
-    FollowSerializer,
-    IngredientSerializer,
     TagSerializer
 )
-
-from recipes.models import (
-    Recipe,
-    Ingredient,
-    Tag,
-    Favorite,
-    ShoppingCart,
-    IngredientRecipe
-)
-from users.models import Follow
 
 User = get_user_model()
 
@@ -137,7 +137,7 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(
-        detail=False, 
+        detail=False,
         methods=['GET'],
         permission_classes=[IsAuthenticated],
         url_path='subscriptions'
