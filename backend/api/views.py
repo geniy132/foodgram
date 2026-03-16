@@ -27,8 +27,7 @@ from .base_entities import AllowedMethodsMixin
 from .filters import RecipeFilter
 from .permissions import (
     IsAdminOrOwnerOrReadOnly,
-    IsAdminOrReadAndCreateOnly,
-    IsAdminOrReadOnly
+    IsAdminOrReadAndCreateOnly
 )
 from .serializers import (
     AppUserSerializer,
@@ -266,15 +265,15 @@ class RecipeView(AllowedMethodsMixin, viewsets.ModelViewSet):
         ingredients = IngredientRecipe.objects.filter(
             recipe__shopping_cart__user=request.user
         ).values(
-            'ingredient__name', 'ingredient__measurement_unit'
+            'ingredient__name', 
+            'ingredient__measurement_unit'
         ).annotate(total=Sum('amount')).order_by('ingredient__name')
-        text = 'Список покупок:\n'
+        text = 'Список покупок:\n\n'
         for ingredient in ingredients:
-            total = ingredient['total']
-            amount = f'{total:g}' if total is not None else 'по вкусу'
             name = ingredient['ingredient__name']
             unit = ingredient['ingredient__measurement_unit']
-            text += f'• {name} ({unit}) — {amount}\n'
+            amount = ingredient['total']
+            text += f'• {name} — {amount:g} {unit}\n'
         response = HttpResponse(
             text, content_type='text/plain; charset=utf-8'
         )
@@ -285,7 +284,7 @@ class RecipeView(AllowedMethodsMixin, viewsets.ModelViewSet):
 
 
 class IngredientView(viewsets.ReadOnlyModelViewSet):
-    """Вьюсет для работы с ингридиентами."""
+    """Вьюсет для работы с ингредиентами."""
 
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
@@ -299,10 +298,9 @@ class IngredientView(viewsets.ReadOnlyModelViewSet):
         return queryset
 
 
-class TagView(viewsets.ModelViewSet):
+class TagView(viewsets.ReadOnlyModelViewSet):
     """Вьюсет для работы с тегами."""
 
     queryset = Tag.objects.all()
-    permission_classes = (IsAdminOrReadOnly,)
     serializer_class = TagSerializer
     pagination_class = None

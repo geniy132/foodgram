@@ -15,7 +15,7 @@ User = get_user_model()
 
 
 class Ingredient(models.Model):
-    """Модель ингридиента."""
+    """Модель ингредиента."""
     name = models.CharField(
         'Название',
         unique=True,
@@ -27,8 +27,8 @@ class Ingredient(models.Model):
     )
 
     class Meta:
-        verbose_name = 'ингридиент'
-        verbose_name_plural = 'Ингридиенты'
+        verbose_name = 'ингредиент'
+        verbose_name_plural = 'Ингредиенты'
         ordering = ('name',)
 
     def __str__(self):
@@ -108,12 +108,12 @@ class Recipe(models.Model):
         verbose_name = 'рецепт'
         verbose_name_plural = 'Рецепты'
         ordering = ('-id',)
-        constraints = (
+        constraints = [
             models.UniqueConstraint(
                 fields=('author', 'name'),
                 name='unique_dish'
             ),
-        )
+        ]
 
     def __str__(self):
         return self.name[:SHORT_NAME_LENGTH]
@@ -133,7 +133,11 @@ class IngredientRecipe(models.Model):
     )
     amount = models.PositiveSmallIntegerField(
         'Количество',
-        default=0
+        validators=[
+            validators.MinValueValidator(
+                1, message='Минимальное количество — 1'
+            )
+        ]
     )
 
     class Meta:
@@ -142,13 +146,12 @@ class IngredientRecipe(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['recipe', 'ingredient'],
-                name='unique_ingredient_in_recipe'
+                name='unique_ingredient'
             )
         ]
 
     def __str__(self):
-        amount = self.amount if self.amount else 'по вкусу'
-        return f'{self.ingredient} ({amount}) в рецепте {self.recipe}'
+        return f'{self.ingredient} ({self.amount}) в рецепте {self.recipe}'
 
 
 class ShoppingCart(models.Model):
@@ -167,7 +170,7 @@ class ShoppingCart(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['user', 'recipe'],
-                name='unique_cart_recipe'
+                name='unique_recipe'
             )
         ]
 

@@ -10,9 +10,8 @@ class Command(BaseCommand):
         path = 'data/ingredients.json'
         with open(path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-            for item in data:
-                Ingredient.objects.get_or_create(
-                    name=item['name'],
-                    measurement_unit=item['measurement_unit']
-                )
+        Ingredient.objects.bulk_create(
+            [Ingredient(**item) for item in data],
+            ignore_conflicts=True
+        )
         self.stdout.write(self.style.SUCCESS('Ингредиенты загружены!'))
