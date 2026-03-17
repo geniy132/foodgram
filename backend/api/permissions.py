@@ -1,41 +1,19 @@
 from rest_framework import permissions
 
 
-class IsAdminOrReadAndCreateOnly(permissions.BasePermission):
+class IsAuthorOrReadOnly(permissions.BasePermission):
     """
-    Разрешает только ['GET', 'POST'].
-    Остальные операции доступны только администратору.
+    Разрешает изменение только автору объекта.
+    Остальным - только чтение.
     """
 
     def has_permission(self, request, view):
-        return bool(
-            request.method in ['GET', 'POST'] or request.user.is_staff
-        )
-
-
-class IsAdminOrOwnerOrReadOnly(permissions.BasePermission):
-    """
-    Разрешение на уровне объекта: вносить изменения в базу
-    может автор или администратор.
-    """
-
-    def has_object_permission(self, request, view, obj):
         return (
             request.method in permissions.SAFE_METHODS
-            or request.user.is_staff
-            or obj.author == request.user
+            or request.user.is_authenticated
         )
 
-
-class IsAdminOrReadOnly(permissions.BasePermission):
-    """
-    Разрешение на уровне объекта: вносить изменения в базу
-    может только администратор.
-    """
-
-    def has_permission(self, request, view):
-        return bool(
-            request.method in permissions.SAFE_METHODS
-            or (request.user and request.user.is_authenticated
-                and request.user.is_staff)
-        )
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return obj.author == request.user

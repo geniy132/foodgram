@@ -11,7 +11,6 @@ User = get_user_model()
 class AppUserAdmin(UserAdmin):
     list_display = ('id', 'username', 'email', 'first_name', 'last_name')
     search_fields = ('username', 'email')
-    list_filter = ('email', 'username')
     ordering = ('email',)
 
 

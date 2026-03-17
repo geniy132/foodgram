@@ -1,8 +1,8 @@
 # flake8: noqa
-from django.core.management.utils import get_random_secret_key
-
 import os
 from pathlib import Path
+
+from django.core.management.utils import get_random_secret_key
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -125,6 +125,11 @@ REST_FRAMEWORK = {
 
 DJOSER = {
     'LOGIN_FIELD': 'email',
+    'HIDE_USERS': False,
+    'PERMISSIONS': {
+        'user': ['rest_framework.permissions.AllowAny'],
+        'user_list': ['rest_framework.permissions.AllowAny'],
+    },
     'SERIALIZERS': {
         'user': 'api.serializers.AppUserSerializer',
         'current_user': 'api.serializers.AppUserSerializer',

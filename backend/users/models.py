@@ -23,6 +23,16 @@ class AppUser(AbstractUser):
         max_length=USER_NAME_MAX_LENGTH,
         validators=[username_validator]
     )
+    first_name = models.CharField(
+        'Имя',
+        max_length=USER_NAME_MAX_LENGTH,
+        blank=False
+    )
+    last_name = models.CharField(
+        'Фамилия',
+        max_length=USER_NAME_MAX_LENGTH,
+        blank=False
+    )
     avatar = models.ImageField(
         'Аватарка',
         upload_to='images/avatars/',

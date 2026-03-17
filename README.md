@@ -24,56 +24,34 @@ cd foodgram
 Cоздать и активировать виртуальное окружение (для Windows): 
  
 ``` 
-python -m venv env 
+python -m venv venv 
 ``` 
  
 ``` 
 source venv/Scripts/activate 
 ``` 
  
-Установить зависимости из файла requirements.txt: 
-``` 
-cd backend
-``` 
- 
-``` 
-pip install -r requirements.txt 
-``` 
- 
-Выполнить миграции: 
- 
-``` 
-python manage.py migrate 
-``` 
+Установить перемнные окружения (заполнить файл [.env.example](.env.example) своими данными и переименуйте его (удалите ".example" из имени)).
 
-Заполнить базу данных списком ингредиентов: 
- 
-``` 
-python manage.py load_ingredients
+Запустить проект (потребуется установить дополнительное ПО - [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) (для Windows) и инструмент запуска Linux на Windows - [WSL](https://learn.microsoft.com/ru-ru/windows/wsl/install) (пропустить, если уже установлено и настроено)):
+```
+docker compose -f docker-compose.yml up 
 ```
 
-Запустить backend проекта: 
- 
-``` 
-python manage.py runserver 
-``` 
+В новом окне терминала примените миграции и заполните БД:
+```
+docker compose -f docker-compose.yml exec backend python manage.py migrate
+```
 
-Запустить frontend проекта (потребуется установить дополнительное ПО - [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) (для Windows) и инструмент запуска Linux на Windows - [WSL](https://learn.microsoft.com/ru-ru/windows/wsl/install) (пропустить, если уже установлено и настроено)):
+```
+docker compose -f docker-compose.yml exec backend python manage.py load_ingredients
+```
 
-``` 
-cd ..
-``` 
- 
-``` 
-cd infra
-``` 
+Запустить проект - перейдите на локальную страницу проекта [Foodgram](http://127.0.0.1:8000/).
 
-``` 
-docker-compose up
-``` 
 ### 3. Использование: 
 Функциональная составляющая проекта реализуется посредство отправки запросов на эндпоинты. 
-[Документация](http://localhost/api/docs/) к проекту доступна после запуска frontend-а. 
+[Документация](http://127.0.0.1:8000/api/docs/) к проекту доступна после запуска. 
  
 ### 4. Структура проекта: 
 Проект построен из трех основных приложений: recipes (отвечает за основную логику работы проекта),
