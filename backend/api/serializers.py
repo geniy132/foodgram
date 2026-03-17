@@ -185,7 +185,7 @@ class RecipeWriteSerializer(RecipeBaseSerializer):
         if len(tags) != len(set(tags)):
             raise serializers.ValidationError('Теги повторяются!')
         ingredient_ids = [ingredient.get('id') for ingredient
-                           in ingredients if ingredient.get('id')]
+                          in ingredients if ingredient.get('id')]
         if len(ingredient_ids) != len(set(ingredient_ids)):
             raise serializers.ValidationError('Ингредиенты повторяются!')
         return data
