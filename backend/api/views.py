@@ -1,15 +1,15 @@
 from django.contrib.auth import get_user_model
-from django.db.models import BooleanField, Exists, OuterRef, Value, Sum
+from django.db import models
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework
 from djoser.views import UserViewSet as DjoserUserViewSet
-from django.views.generic.base import RedirectView
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import (
     IsAuthenticated,
+    IsAuthenticatedOrReadOnly
 )
 from rest_framework.response import Response
 
@@ -114,7 +114,7 @@ class UserViewSet(DjoserUserViewSet):
                 'Нельзя подписаться на самого себя',
                 status=status.HTTP_400_BAD_REQUEST
             )
-        obj, created = Follow.objects.get_or_create(
+        created, _ = Follow.objects.get_or_create(
             user=user,
             author=author
         )
@@ -142,7 +142,7 @@ class UserViewSet(DjoserUserViewSet):
 class RecipeView(AllowedMethodsMixin, viewsets.ModelViewSet):
     """Вьюсет для работы с рецептами."""
 
-    permission_classes = (IsAuthorOrReadOnly,)
+    permission_classes = (IsAuthorOrReadOnly, IsAuthenticatedOrReadOnly,)
     pagination_class = LimitOffsetPagination
     filter_backends = (
         rest_framework.DjangoFilterBackend,
@@ -152,24 +152,11 @@ class RecipeView(AllowedMethodsMixin, viewsets.ModelViewSet):
     search_fields = ('name',)
 
     def get_queryset(self):
-        user = self.request.user
-        queryset = Recipe.objects.select_related('author').prefetch_related(
-            'tags', 'recipe_ingredients__ingredient'
-        )
-        if user.is_authenticated:
-            is_favorited = Favorite.objects.filter(
-                user=user, recipe=OuterRef('pk')
-            )
-            is_in_shopping_cart = ShoppingCart.objects.filter(
-                user=user, recipe=OuterRef('pk')
-            )
-            return queryset.annotate(
-                is_favorited=Exists(is_favorited),
-                is_in_shopping_cart=Exists(is_in_shopping_cart)
-            )
-        return queryset.annotate(
-            is_favorited=Value(False, output_field=BooleanField()),
-            is_in_shopping_cart=Value(False, output_field=BooleanField())
+        return (
+            Recipe.objects
+            .select_related('author')
+            .prefetch_related('tags', 'recipe_ingredients__ingredient')
+            .add_user_annotations(self.request.user)
         )
 
     def get_serializer_class(self):
@@ -181,7 +168,7 @@ class RecipeView(AllowedMethodsMixin, viewsets.ModelViewSet):
         user = request.user
         recipe = get_object_or_404(Recipe, id=pk)
         if request.method == 'POST':
-            obj, created = model.objects.get_or_create(
+            created, _ = model.objects.get_or_create(
                 user=user, recipe=recipe
             )
             if not created:
@@ -272,13 +259,3 @@ class TagView(viewsets.ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     pagination_class = None
-
-
-class ShortLinkRedirectView(RedirectView):
-    """Перенаправление с короткой ссылки на страницу рецепта."""
-
-    permanent = False
-
-    def get_redirect_url(self, *args, **kwargs):
-        get_object_or_404(Recipe, pk=kwargs.get('pk'))
-        return f'/recipes/{kwargs.get("pk")}/'

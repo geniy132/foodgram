@@ -19,6 +19,7 @@ User = get_user_model()
 
 class Ingredient(models.Model):
     """Модель ингредиента."""
+
     name = models.CharField(
         'Название',
         max_length=INGREDIENT_NAME_LENGTH
@@ -45,6 +46,7 @@ class Ingredient(models.Model):
 
 class Tag(models.Model):
     """Модель тега."""
+
     name = models.CharField(
         'Название',
         unique=True,
@@ -65,6 +67,77 @@ class Tag(models.Model):
 
     def __str__(self):
         return self.name[:SHORT_NAME_LENGTH]
+
+
+class UserRecipeBaseModel(models.Model):
+    """Абстрактная модель для Избранного и Списка покупок."""
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name='Пользователь'
+    )
+    recipe = models.ForeignKey(
+        'Recipe',
+        on_delete=models.CASCADE,
+        verbose_name='Рецепт'
+    )
+
+    class Meta:
+        abstract = True
+        constraints = [
+            models.UniqueConstraint(
+                fields=('user', 'recipe'),
+                name='unique_%(class)s'
+            )
+        ]
+
+
+class ShoppingCart(UserRecipeBaseModel):
+    """Модель списка покупок."""
+
+    class Meta(UserRecipeBaseModel.Meta):
+        verbose_name = 'список покупок'
+        verbose_name_plural = 'Покупки'
+        default_related_name = 'shopping_cart'
+
+
+class Favorite(UserRecipeBaseModel):
+    """Модель избранного."""
+
+    class Meta(UserRecipeBaseModel.Meta):
+        verbose_name = 'избранное'
+        verbose_name_plural = 'Избранное'
+        default_related_name = 'favorites'
+
+
+class RecipeQuerySet(models.QuerySet):
+    """
+    QuerySet для работы с рецептами.
+    """
+
+    def add_user_annotations(self, user):
+        if user.is_anonymous:
+            return self.annotate(
+                is_favorited=models.Value(
+                    False, output_field=models.BooleanField()
+                ),
+                is_in_shopping_cart=models.Value(
+                    False, output_field=models.BooleanField()
+                )
+            )
+        return self.annotate(
+            is_favorited=models.Exists(
+                Favorite.objects.filter(
+                    user=user, recipe=models.OuterRef('pk')
+                )
+            ),
+            is_in_shopping_cart=models.Exists(
+                ShoppingCart.objects.filter(
+                    user=user, recipe=models.OuterRef('pk')
+                )
+            )
+        )
 
 
 class Recipe(models.Model):
@@ -114,6 +187,7 @@ class Recipe(models.Model):
         'Дата публикации',
         auto_now_add=True
     )
+    objects = RecipeQuerySet.as_manager()
 
     class Meta:
         verbose_name = 'рецепт'
@@ -132,6 +206,7 @@ class Recipe(models.Model):
 
 class IngredientRecipe(models.Model):
     """Промежуточная модель ингридиента."""
+
     ingredient = models.ForeignKey(
         Ingredient,
         on_delete=models.CASCADE,
@@ -168,43 +243,3 @@ class IngredientRecipe(models.Model):
 
     def __str__(self):
         return f'{self.ingredient} ({self.amount}) в рецепте {self.recipe}'
-
-
-class UserRecipeBaseModel(models.Model):
-    """Абстрактная модель для Избранного и Списка покупок."""
-
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        verbose_name='Пользователь'
-    )
-    recipe = models.ForeignKey(
-        Recipe,
-        on_delete=models.CASCADE,
-        verbose_name='Рецепт'
-    )
-
-    class Meta:
-        abstract = True
-        constraints = [
-            models.UniqueConstraint(
-                fields=('user', 'recipe'),
-                name='unique_%(class)s'
-            )
-        ]
-
-
-class ShoppingCart(UserRecipeBaseModel):
-    """Модель списка покупок."""
-    class Meta(UserRecipeBaseModel.Meta):
-        verbose_name = 'список покупок'
-        verbose_name_plural = 'Покупки'
-        default_related_name = 'shopping_cart'
-
-
-class Favorite(UserRecipeBaseModel):
-    """Модель избранного."""
-    class Meta(UserRecipeBaseModel.Meta):
-        verbose_name = 'избранное'
-        verbose_name_plural = 'Избранное'
-        default_related_name = 'favorites'
