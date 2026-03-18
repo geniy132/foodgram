@@ -227,7 +227,7 @@ class RecipeView(AllowedMethodsMixin, viewsets.ModelViewSet):
         ).values(
             'ingredient__name',
             'ingredient__measurement_unit'
-        ).annotate(total=Sum('amount')).order_by('ingredient__name')
+        ).annotate(total=models.Sum('amount')).order_by('ingredient__name')
         text = 'Список покупок:\n\n'
         for ingredient in ingredients:
             name = ingredient['ingredient__name']
