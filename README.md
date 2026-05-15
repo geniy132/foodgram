@@ -29,7 +29,13 @@ python -m venv venv
 ``` 
 source venv/Scripts/activate 
 ``` 
- 
+
+Установить зависимости из файла requirements.txt:
+
+```
+pip install -r requirements.txt
+```
+
 Установить перемнные окружения (заполнить файл [.env.example](.env.example) своими данными и переименуйте его (удалите ".example" из имени)).
 
 Запустить проект (потребуется установить дополнительное ПО - [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) (для Windows) и инструмент запуска Linux на Windows - [WSL](https://learn.microsoft.com/ru-ru/windows/wsl/install) (пропустить, если уже установлено и настроено)):
